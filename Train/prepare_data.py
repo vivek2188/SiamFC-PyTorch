@@ -20,17 +20,17 @@ def prepare_data(data_dir, train_imdb, use_gpu=True):
 
     # create dataloader
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
-                             shuffle=True, num_workers=config.train_num_workers, drop_last=True)
+                             shuffle=True, drop_last=True)
 
-    # It stores the (exemplar, candidate) frame pairs
+    # It stores the (exemplar, candidate, frame_distance) pairs
     img_pairs = set() 
 
     for i in range(config.num_epoch):
         for j, data in enumerate(tqdm(train_loader)):
             # fetch data, i.e., B x C x W x H (batchsize x channel x width x height)
-            exemplar_imgs, instance_imgs = data
-            for z, x in zip(exemplar_imgs, instance_imgs):
-                img_pairs.add((z, x))
+            exemplar_imgs, instance_imgs, frame_distances = data
+            for z, x, frame_distance in zip(exemplar_imgs, instance_imgs, frame_distances):
+                img_pairs.add((z, x, frame_distance))
         print('Size after Epoch[{}]: {}'.format(i+1, len(img_pairs))) # Checking the progress
     
     # Storing img_pairs to a pickle file
