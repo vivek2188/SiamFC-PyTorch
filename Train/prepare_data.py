@@ -12,7 +12,7 @@ torch.manual_seed(1234)
 
 def prepare_data(data_dir, train_imdb, use_gpu=True):
 
-    # initialize training configuration
+    # initialize configuration
     config = Config()
 
     # load data (see details in VIDDataset.py)
@@ -22,7 +22,8 @@ def prepare_data(data_dir, train_imdb, use_gpu=True):
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
                              shuffle=True, num_workers=config.train_num_workers, drop_last=True)
 
-    img_pairs = set() # It stores the (exemplar, candidate) frame pairs
+    # It stores the (exemplar, candidate) frame pairs
+    img_pairs = set() 
 
     for i in range(config.num_epoch):
         for j, data in enumerate(tqdm(train_loader)):
@@ -40,5 +41,5 @@ if __name__ == "__main__":
     data_dir = "PATH/TO/THE/DATA_DIRECTORY"
     train_imdb = "PATH/TO/THE/TRAIN_JSON_FILE"
 
-    # training SiamFC network, using GPU by default
+    # Preparing image pairs (z, x)
     prepare_data(data_dir, train_imdb)
