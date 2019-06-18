@@ -20,7 +20,7 @@ class DataCL(Dataset):
         reading (z, x) pair
         '''
         # read z and x
-        instance = data_list[np.random.choice(dataLen)]
+        instance = self.data_list[np.random.choice(self.dataLen)]
         z_path, x_path = instance[0], instance[1]
 
         img_z = cv2.imread(os.path.join(self.data_dir, z_path))
