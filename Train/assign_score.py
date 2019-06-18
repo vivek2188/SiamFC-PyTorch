@@ -51,7 +51,7 @@ def generate_score(data_dir, pickle_file, use_gpu=True):
     # Dataloader
     img_pairs = list(img_pairs)
     data_loader = DataLoader(img_pairs, batch_size=config.batch_size,
-                             shuffle=True, num_workers=config.train_num_workers, drop_last=True)
+                             shuffle=True, num_workers=config.train_num_workers)
     
     img_data = set()
     label_mask = None
