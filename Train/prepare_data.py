@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 np.random.seed(1357)
 torch.manual_seed(1234)
 
-def prepare_data(data_dir, train_imdb, use_gpu=True):
+def prepare_data(data_dir, train_imdb, pickle_file, use_gpu=True):
 
     # initialize configuration
     config = Config()
@@ -34,12 +34,13 @@ def prepare_data(data_dir, train_imdb, use_gpu=True):
         print('Size after Epoch[{}]: {}'.format(i+1, len(img_pairs))) # Checking the progress
     
     # Storing img_pairs to a pickle file
-    with open('img_pairs.pickle', 'wb') as fptr:
+    with open(pickle_file, 'wb') as fptr:
         pickle.dump(img_pairs, fptr)
 
 if __name__ == "__main__":
     data_dir = "PATH/TO/THE/DATA_DIRECTORY"
     train_imdb = "PATH/TO/THE/TRAIN_JSON_FILE"
+    pickle_file = "PATH/TO/STORE/final_results"
 
     # Preparing image pairs (z, x)
-    prepare_data(data_dir, train_imdb)
+    prepare_data(data_dir, train_imdb, pickle_file)
