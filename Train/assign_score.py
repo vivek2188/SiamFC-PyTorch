@@ -15,7 +15,7 @@ from CurriculumLearning.scoring_functions import scoring_function
 np.random.seed(1357)
 torch.manual_seed(1234)
 
-def generate_score(data_dir, pickle_file, use_gpu=True):
+def generate_score(data_dir, pickle_file, pretrained_model, use_gpu=True):
     
     # Loading the image pairs
     start = time.time()
@@ -57,7 +57,7 @@ def generate_score(data_dir, pickle_file, use_gpu=True):
     label_mask = None
     
     # Specifying SiamFC Network Architecture
-    net = SiamNet()
+    net = torch.load(pretrained_model)
     if use_gpu:
         net.cuda()
 
@@ -122,12 +122,15 @@ def generate_score(data_dir, pickle_file, use_gpu=True):
             img_data.add((z, x, cuscr))
     
     # Storing the computed cumulative score value
-    with open('scored_data.pickle', 'wb') as fptr:
+    final_pickle = "PATH/TO/STORE/FINAL_RESULTS"
+    with open(final_pickle, 'wb') as fptr:
         pickle.dump(img_data, fptr)
 
 
 if __name__ == "__main__":
     data_dir = "PATH/TO/THE/DATA_DIRECTORY"
+    pickle_file = "PATH/TO/THE/img_pairs_pickle_file"
+    pretrained_model = "PATH/TO/THE/PRETRAINED_MODEL"
 
     # Calculate socre for each (z, x) pair
-    generate_score(data_dir, 'img_pairs.pickle')
+    generate_score(data_dir, pickle_file, pretrained_model)
