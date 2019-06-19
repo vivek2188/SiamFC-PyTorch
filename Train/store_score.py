@@ -57,47 +57,48 @@ def generate_score(data_dir, train_json, store_folder, pretrained_model_path, us
 
     net.eval()
 
-    for j, data in enumerate(tqdm(data_loader)):
-        zs, xs, z_paths, x_paths, fr_dist = data
-        fr_dist = fr_dist.cpu().numpy()
-        fr_dist = 1 - fr_dist / pos_pair_range
+    for epoch in range(config.num_epoch):
+        for j, data in enumerate(tqdm(data_loader)):
+            zs, xs, z_paths, x_paths, fr_dist = data
+            fr_dist = fr_dist.cpu().numpy()
+            fr_dist = 1 - fr_dist / pos_pair_range
 
-        if use_gpu:
-            zs = zs.cuda()
-            xs = xs.cuda()
+            if use_gpu:
+                zs = zs.cuda()
+                xs = xs.cuda()
 
-        # Forward pass
-        correlation = net.forward(Variable(zs), Variable(xs)) / norm_factor
-        normalised_correlation = torch.sigmoid(correlation).detach().cpu().numpy()
-        
-        # Creating the mask for the score map
-        if label_mask is None:
-            response_size = normalised_correlation.shape[2: 4] # Score Map
-            half = response_size[0] // 2 + 1
+            # Forward pass
+            correlation = net.forward(Variable(zs), Variable(xs)) / norm_factor
+            normalised_correlation = torch.sigmoid(correlation).detach().cpu().numpy()
 
-            label_mask, label_weight = create_label(response_size, config, use_gpu) 
-            label_mask = label_mask.cpu().numpy()[0].reshape(response_size)
-            for row in range(label_mask.shape[0]):
-                for col in range(label_mask.shape[1]):
-                    if label_mask[row, col] == 0.:
-                        continue
-                    counter = abs(half-row-1) + abs(half-col-1)
-                    if counter == 2.:
-                        label_mask[row, col] = 1 / 8.
-                    elif counter == 1.:
-                        label_mask[row, col] = 1 / 4.
-            label_mask = np.reshape(label_mask, normalised_correlation.shape[1:])
+            # Creating the mask for the score map
+            if label_mask is None:
+                response_size = normalised_correlation.shape[2: 4] # Score Map
+                half = response_size[0] // 2 + 1
 
-        # Get Correlation Score
-        score = normalised_correlation * label_mask
-        score = score.sum((1, 2, 3)) / 3.
+                label_mask, label_weight = create_label(response_size, config, use_gpu) 
+                label_mask = label_mask.cpu().numpy()[0].reshape(response_size)
+                for row in range(label_mask.shape[0]):
+                    for col in range(label_mask.shape[1]):
+                        if label_mask[row, col] == 0.:
+                            continue
+                        counter = abs(half-row-1) + abs(half-col-1)
+                        if counter == 2.:
+                            label_mask[row, col] = 1 / 8.
+                        elif counter == 1.:
+                            label_mask[row, col] = 1 / 4.
+                label_mask = np.reshape(label_mask, normalised_correlation.shape[1:])
 
-        # Scoring function
-        for ai in alpha:
-            cumulative_score = [scoring_function(round(ai, 1), scr, fr) for scr, fr in zip(score, fr_dist)]
-            idx = int(ai*10)
-            for z, x, cuscr in zip(z_paths, x_paths, cumulative_score):
-                img_data[idx].add((z, x, cuscr))
+            # Get Correlation Score
+            score = normalised_correlation * label_mask
+            score = score.sum((1, 2, 3)) / 3.
+
+            # Scoring function
+            for ai in alpha:
+                cumulative_score = [scoring_function(round(ai, 1), scr, fr) for scr, fr in zip(score, fr_dist)]
+                idx = int(ai*10)
+                for z, x, cuscr in zip(z_paths, x_paths, cumulative_score):
+                    img_data[idx].add((z, x, cuscr))
 
     # Sorting the score in descending order as higher the score corresponds to the more easy sample
     img_data = [sorted(list(imgDatum), key=lambda f: f[2], reverse=True) for imgDatum in img_data]
