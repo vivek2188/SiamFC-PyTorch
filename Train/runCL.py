@@ -84,12 +84,7 @@ def trainCL(data_dir, data_list, val_imdb, gv, model_save_path="./model/Curricul
     for i in range(config.num_epoch):
 
         # Creating the dataloader using the value provided by pacing function
-        if i==0:
-            dataLen = int(gv[i] * len(data_list))
-            train_dataset = DataCL(data_dir, data_list[: dataLen], config, train_z_transforms, train_x_transforms)
-            train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
-                                   shuffle=True, num_workers=config.train_num_workers, drop_last=True)
-        elif i<len(gv) and gv[i]!=gv[i-1]:
+        if i==0 or (i<len(gv) and gv[i]!=gv[i-1]):
             dataLen = int(gv[i] * len(data_list))
             train_dataset = DataCL(data_dir, data_list[: dataLen], config, train_z_transforms, train_x_transforms)
             train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
@@ -126,7 +121,7 @@ def trainCL(data_dir, data_list, val_imdb, gv, model_save_path="./model/Curricul
                 train_eltwise_label, train_instance_weight = create_label(response_size, config, use_gpu)
 
             # clear the gradient
-            optimizer.zero_grad()
+            optimizer.zero_grad()/export/livia/home/vision/vtiwari/Project/SiamFC-PyTorch/Tracking/tracking_result/CurriculumLearning/CL/4/Model-14
 
             # loss
             loss = net.weight_loss(output, train_eltwise_label, train_instance_weight)
