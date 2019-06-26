@@ -57,6 +57,33 @@ class SiamNet(nn.Module):
         score = self.adjust(xcorr_out)
 
         return score
+    
+    def get_normalised_score(self, z, x):
+        z_feat = self.feat_extraction(z)
+        x_feat = self.feat_extraction(x)
+
+        bz, chz, hz, wz = z_feat.size()
+        bx, chx, hx, wx = x_feat.size()
+
+        for i in range(bz):
+            z_feat[i] /= torch.norm(z_feat[i])
+        xcorr_out = self.xcorr(z_feat, x_feat)
+
+        prevh, prevw = None, None
+        for i in range(bx):
+
+            for h in range(0, hx-hz+1):
+                sum_of_squares = torch.sum(x_feat[i, :, h: h+hz, 0: 0+wz] ** 2)
+
+                for w in range(0, wx-wz+1):
+                    if w:
+                        addw = torch.sum(x_feat[i, :, h: h+hz, w+wz-1: w+wz] ** 2)
+                        sum_of_squares += addw - prevw
+
+                    xcorr_out[i, :, h, w] /= torch.sqrt(sum_of_squares)
+                    prevw = torch.sum(x_feat[i, :, h: h+hz, w: w+1] ** 2)
+
+        return xcorr_out
 
     def xcorr(self, z, x):
         """
