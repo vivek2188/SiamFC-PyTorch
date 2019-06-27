@@ -11,7 +11,7 @@ import os
 
 class VIDDataset(Dataset):
 
-    def __init__(self, imdb, data_dir, config, z_transforms, x_transforms, mode = "Train"):
+    def __init__(self, imdb, data_dir, config, z_transforms, x_transforms, curriculum=False, mode="Train"):
         imdb_video      = json.load(open(imdb, 'r'))
         self.videos     = imdb_video['videos']
         self.data_dir   = data_dir
@@ -20,11 +20,17 @@ class VIDDataset(Dataset):
 
         self.z_transforms = z_transforms
         self.x_transforms = x_transforms
+        self.pos_pair_range = config.pos_pair_range
+        self.curriculum = curriculum
+        self.epoch = 0
 
         if mode == "Train":
             self.num = self.config.num_pairs
         else:
             self.num = self.num_videos
+
+    def set_epoch(self, i):
+        self.epoch = i
 
     def __getitem__(self, rand_vid):
         '''
@@ -51,7 +57,11 @@ class VIDDataset(Dataset):
 
         # pick a valid instance within frame_range frames from the examplar, excluding the examplar itself
         possible_x_pos = range(len(video_id_z))
-        rand_x = np.random.choice(possible_x_pos[max(rand_z - self.config.pos_pair_range, 0):rand_z] + possible_x_pos[(rand_z + 1):min(rand_z + self.config.pos_pair_range, len(video_id_z))])
+
+        if self.curriculum==True:
+            pos_pair_range = self.CurriculumLearning()
+
+        rand_x = np.random.choice(possible_x_pos[max(rand_z - pos_pair_range, 0):rand_z] + possible_x_pos[(rand_z + 1):min(rand_z + pos_pair_range, len(video_id_z))])
 
         z = video_id_z[rand_z].copy()    # use copy() here to avoid changing dictionary
         x = video_id_z[rand_x].copy()
@@ -67,8 +77,11 @@ class VIDDataset(Dataset):
         # note that we have done center crop for z in the data augmentation
         img_z = self.z_transforms(img_z)
         img_x = self.x_transforms(img_x)
-
-        return img_z, img_x
+        
+        return img_z, img_x#, z["instance_path"], x["instance_path"], abs(rand_z - rand_x)
 
     def __len__(self):
         return self.num
+   
+    def CurriculumLearning(self, initial=20, step=5):
+        return min(initial+(self.epoch/step)*initial, self.pos_pair_range)
