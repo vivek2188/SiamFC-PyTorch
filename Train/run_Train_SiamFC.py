@@ -24,6 +24,7 @@ def train(data_dir, train_imdb, val_imdb, model_save_path="./model/", use_gpu=Tr
 
     # initialize training configuration
     config = Config()
+    config.pos_pair_range = 180
 
     # do data augmentation in PyTorch;
     # you can also do complex data augmentation as in the original paper
@@ -50,8 +51,8 @@ def train(data_dir, train_imdb, val_imdb, model_save_path="./model/", use_gpu=Tr
     ])
 
     # load data (see details in VIDDataset.py)
-    train_dataset = VIDDataset(train_imdb, data_dir, config, train_z_transforms, train_x_transforms)
-    val_dataset = VIDDataset(val_imdb, data_dir, config, valid_z_transforms, valid_x_transforms, "Validation")
+    train_dataset = VIDDataset(train_imdb, data_dir, config, train_z_transforms, train_x_transforms, curriculum=True)
+    val_dataset = VIDDataset(val_imdb, data_dir, Config(), valid_z_transforms, valid_x_transforms, mode="Validation")
 
     # create dataloader
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
@@ -82,19 +83,22 @@ def train(data_dir, train_imdb, val_imdb, model_save_path="./model/", use_gpu=Tr
     # pair of images (examplar z and search region x) are the same
     train_response_flag = False
     valid_response_flag = False
+    
+    f = open('./model/modified_loss/loss_data.txt', 'a')
 
     # ------------------------ training & validation process ------------------------
     for i in range(config.num_epoch):
 
         # adjusting learning rate
         scheduler.step()
-
+        
         # ------------------------------ training ------------------------------
         # indicating training (very important for batch normalization)
         net.train()
-
+        
         # used to collect loss
         train_loss = []
+        train_dataset.set_epoch(i+1)
 
         for j, data in enumerate(tqdm(train_loader)):
 
@@ -129,19 +133,21 @@ def train(data_dir, train_imdb, val_imdb, model_save_path="./model/", use_gpu=Tr
             optimizer.step()
 
             # collect training loss
-            train_loss.append(loss.data)
-
+            train_loss.append(loss.data.item())
+        
         # ------------------------------ saving model ------------------------------
         if not os.path.exists(model_save_path):
             os.makedirs(model_save_path)
         torch.save(net, model_save_path + "SiamFC_" + str(i + 1) + "_model.pth")
-
+        
         # ------------------------------ validation ------------------------------
         # indicate validation
         net.eval()
 
         # used to collect validation loss
         val_loss = []
+        val_dataset.set_epoch(i+1)
+
 
         for j, data in enumerate(tqdm(val_loader)):
 
@@ -163,16 +169,19 @@ def train(data_dir, train_imdb, val_imdb, model_save_path="./model/", use_gpu=Tr
             loss = net.weight_loss(output, valid_eltwise_label, valid_instance_weight)
 
             # collect validation loss
-            val_loss.append(loss.data)
-
+            val_loss.append(loss.data.item())
+        train_loss = np.array(train_loss)
+        val_loss = np.array(val_loss)
+        f.write('{}, {}'.format(np.mean(train_loss), np.mean(val_loss)))
         print ("Epoch %d   training loss: %f, validation loss: %f" % (i+1, np.mean(train_loss), np.mean(val_loss)))
+    f.close()
 
 
 if __name__ == "__main__":
-
-    data_dir = "/home/hfan/Dataset/ILSVRC2015_crops/Data/VID/train"
-    train_imdb = "/home/hfan/Desktop/PyTorch-SiamFC/ILSVRC15-curation/imdb_video_train.json"
-    val_imdb = "/home/hfan/Desktop/PyTorch-SiamFC/ILSVRC15-curation/imdb_video_val.json"
+    data_dir = "PATH/TO/THE/DATA_DIRECTORY"
+    train_imdb = "PATH/TO/TRAIN_JSON_FILE"
+    val_imdb = "PATH/TO/VALIDATION_JSON_FILE"
 
     # training SiamFC network, using GPU by default
-    train(data_dir, train_imdb, val_imdb)
+    model_save_path = './model/'
+    train(data_dir, train_imdb, val_imdb, model_save_path)
