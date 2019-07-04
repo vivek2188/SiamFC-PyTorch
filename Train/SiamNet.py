@@ -127,3 +127,10 @@ class SiamNet(nn.Module):
                                                   label,
                                                   weight,
                                                   size_average=False) / self.config.batch_size
+    
+    def focal_loss(self, prediction, label, weight, gamma = 2.): 
+        prediction = prediction * (2 * label - 1) # if label[idx]=0 then prediction[idx]=-prediction[idx] otherwise remains same
+        pt = prediction.sigmoid()
+        modulating_factor = (1. - pt).pow(gamma)
+        loss = weight * modulating_factor * pt.log()
+        return -1*loss.sum()/label.size()[0]
